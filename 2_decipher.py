@@ -1,3 +1,5 @@
+import re
+
 encoded = """
    !!junk-77!! | [3::DW::ok] | [xx::DRSC::bad] |
    [1::NFFU::ok] | ##nothing## | [5::TQI_QNGWFWD::ok] |
@@ -5,17 +7,34 @@ encoded = """
    [6::GZ_7_VS::ok] | [99::IGNORE_ME::bad] | %%noise%%
 """
 
-###############################################################
-"""
-1. Part of the real message is inside the the '[' and ']' brackets.
-2. Each fragment inside the brackets has a number, jumbled text of the message, and 'ok'. Focus on only those fragments. The '::' are just separating these parts in the fragment 
-3. To find the actual message in every fragment,take every letter in the jumbled message, and shift it backward by the number part in that fragment
-For example, if the number is 3 and the jumbled message is ABC, then the actual message is XYZ.
-Similarly, if the number is 5 and the jumbled message is ABC, then the actual message is VWX.
-4. Ignore any fragment that has 'bad' instead of 'ok'.
-5. Once you have decoded all the fragments, combine them in the order of their numbers to get the final message. First comes the fragment with number 1, then 2, and so on.
-"""
-
 alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+# 提取所有 [数字::文本::状态] 片段
+pattern = r'\[(\d+)::([A-Z0-9_]+)::(ok|bad)\]'
+matches = re.findall(pattern, encoded)
 
+# 存储有效片段 (数字, 解码后的文本)
+fragments = []
+
+for num_str, jumbled, status in matches:
+    if status == 'bad':
+        continue
+    num = int(num_str)
+    decoded_chars = []
+    for ch in jumbled:
+        if ch in alphabet:
+            # 向前移动 num 位（循环）
+            idx = alphabet.index(ch)
+            new_idx = (idx - num) % 26
+            decoded_chars.append(alphabet[new_idx])
+        else:
+            # 非字母原样保留
+            decoded_chars.append(ch)
+    decoded_text = ''.join(decoded_chars)
+    fragments.append((num, decoded_text))
+
+# 按数字排序并拼接
+fragments.sort(key=lambda x: x[0])
+final_message = ''.join(text for _, text in fragments)
+
+print(final_message)
